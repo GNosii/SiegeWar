@@ -40,7 +40,7 @@ public class TownMetaDataController {
 				return;
 			}
 			MetaDataUtil.setInt(town, idf, days);
-		} else {
+		} else if (days != 0) {
 			town.addMetaData(new IntegerDataField("siegewar_peacefuldays", days, "Days To Peacefulness Status Change"));			
 		}
 	}
@@ -53,7 +53,7 @@ public class TownMetaDataController {
 		return false;
 	}
 	
-	public static void setDesiredPeacefullnessSetting(Town town, boolean bool) {
+	public static void setDesiredPeacefulnessSetting(Town town, boolean bool) {
 		BooleanDataField bdf = (BooleanDataField) desiredPeacefulness.clone();
 		if (town.hasMeta(bdf.getKey())) {
 			MetaDataUtil.setBoolean(town, bdf, bool);

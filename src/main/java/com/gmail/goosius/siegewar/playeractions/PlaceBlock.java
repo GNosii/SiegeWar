@@ -61,10 +61,12 @@ public class PlaceBlock {
 		
 		try {
 			Material mat = block.getType();
-			//Banner placement
-			if (Tag.BANNERS.isTagged(mat))
+
+			//Standing Banner placement
+			if (Tag.BANNERS.isTagged(mat) && !mat.toString().contains("_W"))
                 try {
-                    evaluatePlaceBanner(player, block);
+					if (isValidPlacement(block))
+                    	evaluatePlaceStandingBanner(player, block);
                 } catch (TownyException e1) {
                     Messaging.sendErrorMsg(player, e1.getMessage());
                     return;
@@ -73,7 +75,8 @@ public class PlaceBlock {
 			//Chest placement
 			if (mat == Material.CHEST || mat == Material.TRAPPED_CHEST)
 				try {
-					evaluatePlaceChest(player, block);
+					if (isValidPlacement(block))
+						evaluatePlaceChest(player, block);
 				} catch (TownyException e) {
 					Messaging.sendErrorMsg(player, e.getMessage());
 					return;
@@ -100,7 +103,7 @@ public class PlaceBlock {
 	 * @param block The banner.
 	 * @throws TownyException thrown when the banner is not allowed to be placed.
 	 */
-	private static void evaluatePlaceBanner(Player player, Block block) throws TownyException {
+	private static void evaluatePlaceStandingBanner(Player player, Block block) throws TownyException {
 
 		// All outcomes require a town.
 		Resident resident = TownyUniverse.getInstance().getResident(player.getUniqueId());
@@ -127,7 +130,7 @@ public class PlaceBlock {
 			} catch (NotRegisteredException ignored) {
 			}
 
-			if (isSurrenderBanner(block)) {
+			if (isWhiteBanner(block)) {
 				// Nation abandoning the siege.
 
 				if (!SiegeWarSettings.getWarSiegeAbandonEnabled())
@@ -149,7 +152,6 @@ public class PlaceBlock {
 				evaluatePlaceColouredBannerInWilderness(block, player, resident, town, nation);
 			}
 
-			
 		/*
 		 * The banner is being placed in a town, which means it is a Town
 		 * trying to surrender their siege. 
@@ -160,7 +162,7 @@ public class PlaceBlock {
 			if (town != null 
 					&& SiegeWarSettings.getWarSiegeSurrenderEnabled() 
 					&& SiegeController.hasSiege(town) 
-					&& isSurrenderBanner(block)) {
+					&& isWhiteBanner(block)) {
 				if (!town.hasResident(resident))
 		            throw new TownyException(Translation.of("msg_err_siege_war_cannot_surrender_not_your_town"));
 
@@ -169,7 +171,10 @@ public class PlaceBlock {
 
 				if (SiegeController.getSiege(town).getStatus() != SiegeStatus.IN_PROGRESS)
 					throw new TownyException(Translation.of("msg_err_siege_war_cannot_surrender_siege_finished"));
-				
+
+				if(town.isConquered())
+					throw new TownyException(Translation.of("msg_war_siege_occupied_towns_cannot_surrender"));
+
 				SurrenderTown.defenderSurrender(SiegeController.getSiege(town));
 			}
 		}
@@ -185,13 +190,8 @@ public class PlaceBlock {
 		// Fail early if this is not a siege-enabled world.
 		if(!SiegeWarDistanceUtil.isSiegeWarEnabledInWorld(block.getWorld()))
 			throw new TownyException(Translation.of("msg_err_siege_war_not_enabled_in_world"));
-
 		
-		List<TownBlock> nearbyCardinalTownBlocks = SiegeWarBlockUtil.getCardinalAdjacentTownBlocks(player, block);
-
-		//If no townblocks are nearby, do normal block placement
-		if (nearbyCardinalTownBlocks.size() == 0)
-			return;
+		List<TownBlock> nearbyCardinalTownBlocks = SiegeWarBlockUtil.getCardinalAdjacentTownBlocks(block);
 
 		//Ensure that only one of the cardinal points has a townblock
 		if(nearbyCardinalTownBlocks.size() > 1)
@@ -208,7 +208,7 @@ public class PlaceBlock {
 		//Ensure that there is only one town adjacent
 		List<TownBlock> adjacentTownBlocks = new ArrayList<>();
 		adjacentTownBlocks.addAll(nearbyCardinalTownBlocks);
-		adjacentTownBlocks.addAll(SiegeWarBlockUtil.getNonCardinalAdjacentTownBlocks(player, block));
+		adjacentTownBlocks.addAll(SiegeWarBlockUtil.getNonCardinalAdjacentTownBlocks(block));
 		for(TownBlock adjacentTownBlock: adjacentTownBlocks) {
 			try {
 				if (adjacentTownBlock.getTown() != town)
@@ -279,9 +279,7 @@ public class PlaceBlock {
 		if(!TownySettings.isUsingEconomy())
 			throw new TownyException(Translation.of("msg_err_siege_war_cannot_plunder_without_economy"));
 		
-		List<TownBlock> nearbyTownBlocks = SiegeWarBlockUtil.getCardinalAdjacentTownBlocks(player, block);
-		if (nearbyTownBlocks.size() == 0)
-			return;   //No town blocks are nearby. Normal block placement
+		List<TownBlock> nearbyTownBlocks = SiegeWarBlockUtil.getCardinalAdjacentTownBlocks(block);
 
 		if (nearbyTownBlocks.size() > 1) //More than one town block nearby. Error
 			throw new TownyException(Translation.of("msg_err_siege_war_too_many_town_blocks_nearby"));
@@ -300,7 +298,7 @@ public class PlaceBlock {
 		PlunderTown.processPlunderTownRequest(player, town);
 	}
 	
-	private static boolean isSurrenderBanner(Block block) {
+	private static boolean isWhiteBanner(Block block) {
 		return block.getType() == Material.WHITE_BANNER  && ((Banner) block.getState()).getPatterns().size() == 0;
 	}
 	
@@ -311,6 +309,17 @@ public class PlaceBlock {
 				result++;
 		}
 		return result;
+	}
+
+	private static boolean isValidPlacement(Block block) {
+		if (!TownyAPI.getInstance().isWilderness(block)) {
+			if (isWhiteBanner(block))
+				return true;
+		} else {
+			if (SiegeWarBlockUtil.getCardinalAdjacentTownBlocks(block).size() > 0)
+				return true;
+		}
+		return false;
 	}
 }
 

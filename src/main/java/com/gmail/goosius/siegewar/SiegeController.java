@@ -1,6 +1,8 @@
 package com.gmail.goosius.siegewar;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.gmail.goosius.siegewar.utils.SiegeWarDistanceUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -18,6 +21,7 @@ import com.gmail.goosius.siegewar.enums.SiegeSide;
 import com.gmail.goosius.siegewar.enums.SiegeStatus;
 import com.gmail.goosius.siegewar.metadata.SiegeMetaDataController;
 import com.gmail.goosius.siegewar.objects.Siege;
+import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.gmail.goosius.siegewar.utils.SiegeWarMoneyUtil;
 import com.gmail.goosius.siegewar.utils.SiegeWarTimeUtil;
 import com.palmergames.bukkit.towny.TownyUniverse;
@@ -34,7 +38,9 @@ public class SiegeController {
 
 	private final static Map<String, Siege> sieges = new ConcurrentHashMap<>();
 	private static Map<UUID, Siege> townSiegeMap = new ConcurrentHashMap<>();
-
+	private static List<Town> siegedTowns = new ArrayList<>();
+	private static List<String> siegedTownNames = new ArrayList<>();
+	
 	public static void newSiege(String siegeName) {
 		Siege siege = new Siege(siegeName);		
 
@@ -51,10 +57,12 @@ public class SiegeController {
 		}
 		return sieges.get(siegeName.toLowerCase());
 	}
-
+	
 	public static void clearSieges() {
 		sieges.clear();
 		townSiegeMap.clear();
+		siegedTowns.clear();
+		siegedTownNames.clear();
 	}
 	
 	public static boolean saveSieges() {
@@ -66,7 +74,6 @@ public class SiegeController {
 	
 	public static void saveSiege(Siege siege) {
 		Town town = siege.getDefendingTown();
-		SiegeMetaDataController.setSiegeName(town, siege.getName());
 		SiegeMetaDataController.setNationUUID(town, siege.getAttackingNation().getUUID().toString());
 		SiegeMetaDataController.setTownUUID(town, siege.getDefendingTown().getUUID().toString());
 		SiegeMetaDataController.setFlagLocation(town, siege.getFlagLocation().getWorld().getName()
@@ -103,6 +110,8 @@ public class SiegeController {
 					newSiege(name);
 					setSiege(town, true);
 					townSiegeMap.put(town.getUUID(), sieges.get(name.toLowerCase()));
+					siegedTowns.add(town);
+					siegedTownNames.add(town.getName());
 				}
 			}
 	}
@@ -183,9 +192,11 @@ public class SiegeController {
 		//Remove siege from maps
 		sieges.remove(siege.getName().toLowerCase());
 		townSiegeMap.remove(town.getUUID());
+		removeSiegedTown(siege);
 
+		setTownFlags(town, false);
 		//Save town
-		TownyUniverse.getInstance().getDataSource().saveTown(town);
+		town.save();
 		//Save attacking nation
 		TownyUniverse.getInstance().getDataSource().saveNation(siege.getAttackingNation());
 		siege = null;
@@ -209,6 +220,29 @@ public class SiegeController {
 	
 	public static boolean hasSieges(Nation nation) {
 		return !getSieges(nation).isEmpty();
+	}
+
+	public static Collection<Town> getSiegedTowns() {
+		return Collections.unmodifiableCollection(siegedTowns);
+	}
+	
+	public static Collection<String> getSiegedTownNames() {
+		return Collections.unmodifiableCollection(siegedTownNames);
+	}
+	
+	public static void renameSiegedTownName(String oldname, String newname) {
+		siegedTownNames.remove(oldname);
+		siegedTownNames.add(newname);
+	}
+	
+	public static void addSiegedTown(Siege siege) {
+		siegedTowns.add(siege.getDefendingTown());
+		siegedTownNames.add(siege.getDefendingTown().getName());
+	}
+
+	public static void removeSiegedTown(Siege siege) {
+		siegedTowns.remove(siege.getDefendingTown());
+		siegedTownNames.remove(siege.getDefendingTown().getName());
 	}
 	
 	@Nullable
@@ -262,5 +296,27 @@ public class SiegeController {
 		}
 		return result;
 	}
-    
+
+	public static List<Siege> getActiveSiegesAt(Location location) {
+		List<Siege> siegesAtLocation = new ArrayList<>();
+		for (Siege siege : sieges.values()) {
+			if (SiegeWarDistanceUtil.isInSiegeZone(location, siege) && siege.getStatus().isActive()) {
+				siegesAtLocation.add(siege);
+			}
+		}
+		return siegesAtLocation;
+	}
+	
+	/**
+	 * Sets pvp and explosions in a town to the desired setting, if enabled in the config.
+	 * 
+	 * @param town The town to set the flags for.
+	 * @param desiredSetting The value to set pvp and explosions to.
+	 */
+	public static void setTownFlags(Town town, boolean desiredSetting) {
+		if (town.getPermissions().pvp != desiredSetting && SiegeWarSettings.getWarSiegePvpAlwaysOnInBesiegedTowns())
+			town.getPermissions().pvp = desiredSetting;
+		if (town.getPermissions().explosion != desiredSetting && SiegeWarSettings.getWarSiegeExplosionsAlwaysOnInBesiegedTowns())
+			town.getPermissions().explosion = desiredSetting;
+	}
 }

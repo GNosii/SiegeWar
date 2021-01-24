@@ -4,10 +4,8 @@ import java.io.File;
 import java.io.IOException;
 
 import com.gmail.goosius.siegewar.SiegeWar;
-import com.gmail.goosius.siegewar.settings.CommentedConfiguration;
-import com.gmail.goosius.siegewar.settings.ConfigNodes;
 
-import io.github.townyadvanced.util.FileMgmt;
+import com.gmail.goosius.siegewar.utils.FileMgmt;
 
 public class Settings {
 	private static CommentedConfiguration config, newConfig;
@@ -135,19 +133,6 @@ public class Settings {
 	public static String getString(ConfigNodes node) {
 
 		return config.getString(node.getRoot().toLowerCase(), node.getDefault());
-	}
-
-	public static boolean isUpdating(String currentVersion) {
-
-		if (isUpToDate(currentVersion))
-			return false;
-		else
-			return true; // Assume
-	}
-
-	private static boolean isUpToDate(String currentVersion) {
-
-		return currentVersion.equals(getLastRunVersion(currentVersion));
 	}
 
 	public static void setLastRunVersion(String currentVersion) {

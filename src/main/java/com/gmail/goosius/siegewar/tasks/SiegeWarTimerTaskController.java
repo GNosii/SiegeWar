@@ -9,7 +9,6 @@ import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.gmail.goosius.siegewar.timeractions.AttackerWin;
 import com.gmail.goosius.siegewar.timeractions.DefenderWin;
 import com.gmail.goosius.siegewar.utils.*;
-import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.towny.object.Nation;
 import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.TownyObject;
@@ -39,8 +38,6 @@ public class SiegeWarTimerTaskController {
 	 * @param siege
 	 */
 	private static void evaluateTimedSiegeOutcome(Siege siege) {
-		TownyUniverse universe = TownyUniverse.getInstance();
-
 		switch(siege.getStatus()) {
 			case IN_PROGRESS:
 				//If scheduled end time has arrived, choose winner
@@ -53,7 +50,7 @@ public class SiegeWarTimerTaskController {
 					}
 
 					//Save changes to db
-					universe.getDataSource().saveTown(siege.getDefendingTown());
+					siege.getDefendingTown().save();
 				}
 				break;
 
@@ -82,11 +79,11 @@ public class SiegeWarTimerTaskController {
 
 	/**
 	 * Evaluate the visibility of players on the dynmap
-	 * when using the 'tactical visibility' feature
+	 * when using the 'map sneaking' feature
 	 */
-	public static void evaluateTacticalVisibility() {
-		if (SiegeWarSettings.getWarSiegeTacticalVisibilityEnabled()) {
-			SiegeWarDynmapUtil.evaluatePlayerTacticalInvisibility();
+	public static void evaluateMapSneaking() {
+		if (SiegeWarSettings.getWarSiegeMapSneakingEnabled()) {
+			SiegeWarDynmapUtil.evaluatePlayerMapSneaking();
 		}
 	}
 
@@ -116,4 +113,11 @@ public class SiegeWarTimerTaskController {
 			TownPeacefulnessUtil.punishPeacefulPlayersInActiveSiegeZones();
 		}
 	}
+
+	public static void punishNonSiegeParticipantsInSiegeZone() {
+		if (SiegeWarSettings.getPunishingNonSiegeParticipantsInSiegeZone()) {
+			SiegeWarSicknessUtil.punishNonSiegeParticipantsInSiegeZone();
+		}
+	}
+
 }

@@ -18,10 +18,10 @@ import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.gmail.goosius.siegewar.settings.Translation;
 import com.gmail.goosius.siegewar.utils.SiegeWarDistanceUtil;
 import com.gmail.goosius.siegewar.utils.SiegeWarPermissionUtil;
+import com.gmail.goosius.siegewar.utils.TownPeacefulnessUtil;
 import com.palmergames.bukkit.towny.TownyFormatter;
 import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.TownySettings;
-import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.towny.event.DeleteTownEvent;
 import com.palmergames.bukkit.towny.event.NewTownEvent;
 import com.palmergames.bukkit.towny.event.RenameTownEvent;
@@ -84,19 +84,20 @@ public class SiegeWarTownEventListener implements Listener {
 		if (SiegeWarSettings.getWarSiegeEnabled()) {
 			Town town = event.getTown();
 			TownMetaDataController.setSiegeImmunityEndTime(town, System.currentTimeMillis() + (long)(SiegeWarSettings.getWarSiegeSiegeImmunityTimeNewTownsHours() * TimeMgmt.ONE_HOUR_IN_MILLIS));
-			TownMetaDataController.setDesiredPeacefullnessSetting(town, TownySettings.getTownDefaultNeutral());
-			TownyUniverse.getInstance().getDataSource().saveTown(town);
+			TownMetaDataController.setDesiredPeacefulnessSetting(town, TownySettings.getTownDefaultNeutral());
+			town.save();
 		}
 	}
 	
 	/*
-	 * On toggle explosions, SW will stop a town toggling explosions.
+	 * On toggle explosions, SW will stop a town toggling explosions off.
 	 */
 	@EventHandler
 	public void onTownToggleExplosion(TownToggleExplosionEvent event) {
-		if(SiegeWarSettings.getWarSiegeEnabled()
+		if (SiegeWarSettings.getWarSiegeEnabled()
 				&& SiegeWarSettings.getWarSiegeExplosionsAlwaysOnInBesiegedTowns()
-				&& SiegeController.hasActiveSiege(event.getTown()))  {
+				&& SiegeController.hasActiveSiege(event.getTown())
+				&& event.getFutureState() == false)  {
 			event.setCancellationMsg(Translation.of("plugin_prefix") + Translation.of("msg_err_siege_besieged_town_cannot_toggle_explosions"));
 			event.setCancelled(true);
 		}
@@ -107,11 +108,18 @@ public class SiegeWarTownEventListener implements Listener {
 	 */
 	@EventHandler
 	public void onTownTogglePVP(TownTogglePVPEvent event) {
-		if(SiegeWarSettings.getWarSiegeEnabled()
-				&& SiegeWarSettings.getWarSiegePvpAlwaysOnInBesiegedTowns()
-				&& SiegeController.hasActiveSiege(event.getTown()))  {
-			event.setCancellationMsg(Translation.of("plugin_prefix") + Translation.of("msg_err_siege_besieged_town_cannot_toggle_pvp"));
-			event.setCancelled(true);
+		if (SiegeWarSettings.getWarSiegeEnabled()) {
+			if (SiegeWarSettings.getWarSiegePvpAlwaysOnInBesiegedTowns() && SiegeController.hasActiveSiege(event.getTown()))  {
+				event.setCancellationMsg(Translation.of("plugin_prefix") + Translation.of("msg_err_siege_besieged_town_cannot_toggle_pvp"));
+				event.setCancelled(true);
+			}
+			if (SiegeWarSettings.getWarCommonPeacefulTownsEnabled()
+					&& !SiegeWarSettings.getWarCommonPeacefulTownsAllowedToTogglePVP()
+					&& event.getTown().isNeutral()
+					&& !event.getTown().isPVP()) {
+				event.setCancellationMsg(Translation.of("plugin_prefix") + Translation.of("msg_err_peaceful_town_pvp_forced_off"));
+				event.setCancelled(true);
+			}
 		}
 	}
 	
@@ -145,8 +153,10 @@ public class SiegeWarTownEventListener implements Listener {
 		Town town = event.getTown();
 		
 		if (event.isAdminAction()) {
-			TownMetaDataController.setDesiredPeacefullnessSetting(town, event.getFutureState());
+			TownMetaDataController.setDesiredPeacefulnessSetting(town, event.getFutureState());
 			TownMetaDataController.setPeacefulnessChangeDays(town, 0);
+			if (event.getFutureState() == true)
+				TownPeacefulnessUtil.disableTownPVP(town);
 			return;
 		} else {
 			int days;
@@ -159,7 +169,7 @@ public class SiegeWarTownEventListener implements Listener {
 			if (TownMetaDataController.getPeacefulnessChangeConfirmationCounterDays(town) == 0) {
 				
 				//Here, no countdown is in progress, and the town wishes to change peacefulness status
-				TownMetaDataController.setDesiredPeacefullnessSetting(town, !town.isNeutral());
+				TownMetaDataController.setDesiredPeacefulnessSetting(town, !town.isNeutral());
 				TownMetaDataController.setPeacefulnessChangeDays(town, days);
 				
 				//Send message to town
@@ -183,7 +193,7 @@ public class SiegeWarTownEventListener implements Listener {
 				
 			} else {
 				//Here, a countdown is in progress, and the town wishes to cancel the countdown,
-				TownMetaDataController.setDesiredPeacefullnessSetting(town, town.isNeutral());
+				TownMetaDataController.setDesiredPeacefulnessSetting(town, town.isNeutral());
 				TownMetaDataController.setPeacefulnessChangeDays(town, 0);
 				//Send message to town
 				TownyMessaging.sendPrefixedTownMessage(town, String.format(Translation.of("msg_war_common_town_peacefulness_countdown_cancelled")));				
@@ -264,6 +274,7 @@ public class SiegeWarTownEventListener implements Listener {
 	public void onTownRename(RenameTownEvent event) {
 		if (SiegeController.hasSiege(event.getTown())) {
 			SiegeController.saveSiege(SiegeController.getSiege(event.getTown()));
+			SiegeController.renameSiegedTownName(event.getOldName(), event.getTown().getName());
 		}
 	}
 
@@ -397,9 +408,9 @@ public class SiegeWarTownEventListener implements Listener {
             case ATTACKER_ABANDON:
                 return Translation.of("status_town_siege_status_attacker_abandon");
             case PENDING_DEFENDER_SURRENDER:
-                return Translation.of("status_town_siege_status_pending_defender_surrender", siege.getFormattedTimeUntilDefenderSurrender());
+                return Translation.of("status_town_siege_status_pending_defender_surrender", siege.getTimeRemaining());
             case PENDING_ATTACKER_ABANDON:
-                return Translation.of("status_town_siege_status_pending_attacker_abandon", siege.getFormattedTimeUntilAttackerAbandon());
+                return Translation.of("status_town_siege_status_pending_attacker_abandon", siege.getTimeRemaining());
             default:
                 return "???";
         }

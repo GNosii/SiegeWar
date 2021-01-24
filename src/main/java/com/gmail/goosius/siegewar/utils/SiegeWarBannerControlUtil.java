@@ -180,15 +180,11 @@ public class SiegeWarBannerControlUtil {
 		if(!player.isOnline())
 			return false; // Player offline
 
-		if(player.isFlying())
+		if(player.isFlying() || player.isGliding())
 			return false;   // Player is flying
 
 		if(!SiegeWarPointsUtil.isPlayerInTimedPointZone(player, siege))
 			return false; //player is not in the timed point zone
-
-		if(!SiegeWarDistanceUtil.isUndergroundBannerControlEnabledInWorld(player.getLocation().getWorld())
-			&& SiegeWarDistanceUtil.doesLocationHaveANonAirBlockAboveIt(player.getLocation()))
-			return false; //player has a block above them
 
 		return true;
 	}
@@ -200,6 +196,14 @@ public class SiegeWarBannerControlUtil {
 				if (!doesPlayerMeetBasicSessionRequirements(siege, bannerControlSession.getPlayer(), bannerControlSession.getResident())) {
 					siege.removeBannerControlSession(bannerControlSession);
 					Messaging.sendMsg(bannerControlSession.getPlayer(), Translation.of("msg_siege_war_banner_control_session_failure"));
+
+					if (bannerControlSession.getPlayer().hasPotionEffect(PotionEffectType.GLOWING)) {
+						Towny.getPlugin().getServer().getScheduler().scheduleSyncDelayedTask(Towny.getPlugin(), new Runnable() {
+							public void run() {
+								bannerControlSession.getPlayer().removePotionEffect(PotionEffectType.GLOWING);
+							}
+						});
+					}
 					continue;
 				}
 

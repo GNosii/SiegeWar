@@ -1,5 +1,5 @@
 name: SiegeWar
-version: 0.04
+version: 0.06
 language: english
 author: Goosius
 website: 'http://townyadvanced.github.io/'
@@ -8,7 +8,6 @@ description: >
     If you wish to change any of the entries, make a copy named something else.
     Alternate language files can be enabled by altering the
     [language] entry in config.yml
-
 #
 #
 #         You MUST retain spacing in the texts.
@@ -29,13 +28,13 @@ msg_err_command_disable: '&cYou don''t have enough permissions for that command.
 
 #Added in (Siegewar version)
 #Siege war happy-path messages
-msg_siege_war_revolt: '&bThe people of %s, led by %s, have revolted against the occupying power of %s, and declared themselves free to choose their own destiny!'
+msg_siege_war_revolt: '&bThe people of %s, led by %s, have revolted against %s, and declared themselves free to choose their own destiny!'
 msg_siege_war_siege_started_neutral_town: '&bAn army belonging to %s has attacked %s. A siege has begun!'
 msg_siege_war_siege_started_nation_town: '&bAn army belonging to %s has attacked %s at %s. A siege has begun!'
 msg_siege_war_attack_pay_war_chest: '&bA war-chest has been prepared by %s, with a value of %s. Whoever wins the siege will get this money.'
 msg_siege_war_attack_recover_war_chest: '&bThe war chest has been recovered by %s, with a value of %s.'
-msg_siege_war_attacker_death: '&bSiege on %s > An attacker died > @%s. Siege points -%d.'
-msg_siege_war_defender_death: '&bSiege on %s > A defender died > @%s. Siege points +%d.'
+msg_siege_war_attacker_death: '&bSiege of %s > Attacker died > %s > Siege points -%d'
+msg_siege_war_defender_death: '&bSiege of %s > Defender died > %s > Siege points +%d'
 msg_siege_war_defender_win: '&bThe defenders of %s have successfully driven off all attacking armies. The siege has failed!'
 msg_siege_war_attacker_win: '&bAn army belonging to %s has successfully breached the defences of %s. The siege is over!'
 msg_siege_war_attacker_abandon: '&bAn army belonging to %s has abandoned its attack on %s. The defenders are victorious!'
@@ -51,7 +50,7 @@ msg_siege_war_town_bankrupted_from_plunder: '&b%s has been bankrupted by %s!'
 msg_siege_war_nation_defeated: '&b%s has been defeated!.'
 msg_siege_war_attacking_troops_at_siege_banner: '&bSiege on %s > Attackers are at the siege banner.'
 msg_siege_war_defending_troops_at_siege_banner: '&bSiege on %s > Town defenders are at the siege banner.'
-msg_siege_war_banner_control_session_started: '&bBanner control session started. Remain close to the siege-banner (%d blocks horizonally, %d blocks vertically), outside the town, not flying, and not under a block (world dependant), for %s. If your session succeeds, you will gain banner control for your side (or be added to the banner control list).'
+msg_siege_war_banner_control_session_started: '&bBanner control session started. Remain close to the siege-banner (%d blocks horizonally, %d blocks vertically), outside the town, and not flying, for %s. If your session succeeds, you will gain banner control for your side (or be added to the banner control list).'
 msg_siege_war_banner_control_session_success: '&bBanner control session succeeded!. You have been added to the banner control list.'
 msg_siege_war_banner_control_gained_by_attacker: '&bSiege on %s > The attackers have gained banner control.'
 msg_siege_war_banner_control_gained_by_defender: '&bSiege on %s > The defenders have gained banner control.'
@@ -119,7 +118,7 @@ msg_err_siege_war_banner_support_block_not_stable: "&cYou cannot place the banne
 # Spawn
 msg_err_siege_war_cannot_spawn_into_siegezone_or_besieged_town: '&cOnly town residents can spawn into a besieged town or siege zone (unless the target town is peaceful).'
 #Banner control
-msg_siege_war_banner_control_session_failure: '&cBanner control session failed!. Common causes for this include: Going into the town, too far from the banner, flying, or under a block (world-dependent).'
+msg_siege_war_banner_control_session_failure: '&cBanner control session failed!. Common causes for this include: Going into the town, too far from the banner, or flying.'
 msg_war_siege_zone_milk_bucket_forbidden_while_attempting_banner_control: 'You cannot use this item while in a banner control session.'
 
 #Town Info Siege Section
@@ -207,3 +206,51 @@ msg_err_no_money: '&cThere is not enough money in the bank.'
 msg_war_siege_peaceful_town_total_switches: '&b%d peaceful town%s %s peacefully switched nations.'
 msg_err_not_registered_1: '&c%s is not registered.'
 msg_error_must_be_num: '&bAmount must be a number.'
+
+#Added in 0.05:
+msg_err_not_being_sieged: '&bTown %s does not have any active sieges.'
+msg_err_town_not_registered: '&cTown %s is not registered.'
+
+#Scoreboard
+hud_title: 'Siege'
+hud_siegestatus: 'Siege Status'
+hud_attackers: 'ATK: '
+hud_defenders: 'DEF: '
+hud_points: 'Points: '
+hud_banner_control: 'Banner Ctrl: '
+hud_time_remaining: 'Time Left: '
+
+msg_err_peaceful_town_pvp_forced_off: '&cPeaceful towns have PVP forced OFF.'
+msg_swa_set_points_success: '&bSuccessfully set siege points to %d for %s.'
+msg_swa_resident_already_has_control: '&cResident %s already has control.'
+msg_swa_resident_doesnt_have_control: "&cResident %s doesn't have control."
+msg_swa_set_plunder_success: '&bSet plundered to %s for %s.'
+msg_swa_set_captured_success: '&bSet captured to %s for %s.'
+
+siege_status_in_progress: 'In Progress'
+siege_status_attacker_win: 'Attacker Win'
+siege_status_defender_win: 'Defender Win'
+siege_status_attacker_abandon: 'Attacker Abandon'
+siege_status_defender_surrender: 'Defender Surrender'
+siege_status_pending_attacker_abandon: 'Pending Attacker Abandon'
+siege_status_pending_defender_surrender: 'Pending Defender Surrender'
+siege_status_unknown: 'Unknown'
+
+dynmap_siege_title: 'Siege: %s'
+dynmap_siege_attacker: 'Attacker: %s'
+dynmap_siege_defender: 'Defender: %s'
+dynmap_siege_points: 'Points: %d'
+dynmap_siege_banner_control: 'Banner Control: %s'
+dynmap_siege_status: 'Status: %s'
+dynmap_siege_status_in_progress: 'In Progress'
+dynmap_siege_status_pending_surrender: 'Pending Surrender'
+dynmap_siege_status_pending_abandon: 'Pending Abandon'
+dynmap_siege_time_left: 'Time Left: %s'
+dynmap_siege_war_chest: 'War Chest: %s'
+
+#Added in 0.06:
+msg_inventory_degrade_warning: '&4WARNING: &cSome of your gear is close to breaking due to inventory degradation.'
+msg_swa_remove_siege_success: '&bSuccessfully removed siege.'
+msg_war_siege_occupied_towns_cannot_surrender: '&cOccupied towns cannot surrender.'
+msg_you_received_war_sickness: '&cYou are not a participant of this siege and cannot be in the Siege Zone. Please leave to remove the war sickness. Common causes of war sickness: being in a peaceful town, not having a military rank or not being allied to either side.'
+msg_you_will_get_sickness: '&c&cYou are not a participant of this siege and cannot be in the Siege Zone. Please leave or you will receive war sickness in %s seconds.'

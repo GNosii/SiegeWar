@@ -14,11 +14,9 @@ import com.palmergames.bukkit.towny.object.WorldCoord;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -33,7 +31,6 @@ public class SiegeWarDistanceUtil {
 
 	private static final int TOWNBLOCKSIZE= TownySettings.getTownBlockSize();
 	public static List<String> worldsWithSiegeWarEnabled = null;
-	public static List<String> worldsWithUndergroundBannerControlEnabled = null;
 
 	/**
 	 * This method determines if the difference in elevation between a (attack banner) block, 
@@ -124,26 +121,6 @@ public class SiegeWarDistanceUtil {
 		return false;
 	}
 
-    /**
-     * This method determines if a location has an air block above it
-     *
-     * @param location the location
-     * @return true if location has an air block above it
-     */
-    public static boolean doesLocationHaveANonAirBlockAboveIt(Location location) {
-        location.add(0,1,0);
-
-        while(location.getY() < 256)
-        {
-            if(!(location.getBlock().getType() == Material.AIR || location.getBlock().getType() == Material.CAVE_AIR || location.getBlock().getType() == Material.VOID_AIR))
-            {
-                return true;   //There is a non-air block above them
-            }
-            location.add(0,1,0);
-        }
-        return false;  //There is nothing but air above them
-    }
-
 	/**
 	 * This method determines if a siegewar is enabled in the given world
 	 *
@@ -162,34 +139,12 @@ public class SiegeWarDistanceUtil {
 		return worldsWithSiegeWarEnabled.contains(worldToCheck.getName());
 	}
 
-	/**
-	 * This method determines if underground banner control is enabled in the given world
-	 *
-	 * @param worldToCheck the world to check
-	 * @return true if underground banner control is enabled in the given world
-	 */
-	public static boolean isUndergroundBannerControlEnabledInWorld(World worldToCheck) {
-		if (worldsWithUndergroundBannerControlEnabled == null) {
-			worldsWithUndergroundBannerControlEnabled = new ArrayList<>();
-			String[] worldNamesAsArray = SiegeWarSettings.getWarWorldsWithUndergroundBannerControl().split(",");
-			for (String worldName : worldNamesAsArray) {
-				if (Bukkit.getServer().getWorld(worldName.trim()) != null)
-					worldsWithUndergroundBannerControlEnabled.add(Bukkit.getServer().getWorld(worldName.trim()).getName());
-			}
-		}
-		return worldsWithUndergroundBannerControlEnabled.contains(worldToCheck.getName());
-	}
-
 	public static boolean isInSiegeZone(Location location, Siege siege) {
-		return areLocationsClose(location, siege.getFlagLocation(), SiegeWarSettings.getWarSiegeZoneRadiusBlocks());
+		return areLocationsCloseHorizontally(location, siege.getFlagLocation(), SiegeWarSettings.getWarSiegeZoneRadiusBlocks());
 	}
 
 	public static boolean isInSiegeZone(Entity entity, Siege siege) {
-		return areLocationsClose(entity.getLocation(), siege.getFlagLocation(), SiegeWarSettings.getWarSiegeZoneRadiusBlocks());
-	}
-
-	public static boolean isCloseToLeader(Player player1, Player player2) {
-		return areLocationsClose(player1.getLocation(), player2.getLocation(), SiegeWarSettings.getWarSiegeLeadershipAuraRadiusBlocks());
+		return areLocationsCloseHorizontally(entity.getLocation(), siege.getFlagLocation(), SiegeWarSettings.getWarSiegeZoneRadiusBlocks());
 	}
 
 	public static boolean isInTimedPointZone(Entity entity, Siege siege) {
@@ -223,13 +178,6 @@ public class SiegeWarDistanceUtil {
 		return distanceTownblocks < radiusTownblocks;
 	}
 
-	private static boolean areLocationsClose(Location location1, Location location2, int radius) {
-		if(!location1.getWorld().getName().equalsIgnoreCase(location2.getWorld().getName()))
-			return false;
-
-		return location1.distance(location2) < radius;
-	}
-
 	private static boolean areLocationsClose(Location location1, Location location2, int maxHorizontalDistance, int maxVerticalDistance) {
 		if(!location1.getWorld().getName().equalsIgnoreCase(location2.getWorld().getName()))
 			return false;
@@ -246,7 +194,17 @@ public class SiegeWarDistanceUtil {
 
 		return true;
 	}
-	
+
+	//Check horizontal distance only
+	private static boolean areLocationsCloseHorizontally(Location location1, Location location2, int radius) {
+		if(!location1.getWorld().getName().equalsIgnoreCase(location2.getWorld().getName()))
+			return false;
+
+		//Check horizontal distance
+		double xzDistance = Math.sqrt(Math.pow(location1.getX() - location2.getX(), 2) + Math.pow(location1.getZ() - location2.getZ(), 2));
+		return xzDistance < radius;
+	}
+
 	private static Location getTopNorthWestCornerLocation(WorldCoord worldCoord) {
 		int locX = worldCoord.getX() * TOWNBLOCKSIZE;
 		int locZ = worldCoord.getZ() * TOWNBLOCKSIZE;
