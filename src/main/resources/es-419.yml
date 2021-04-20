@@ -17,6 +17,8 @@ description: >
 #  Si deseas cambiar el orden de alguna variable puedes usar el Formatter de Java
 #  Más información: https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html
 
+# Para asegurarte de que sea más fácil ayudarte con errores, te recomendamos no traducir los mensajes relacionados a errores del plugin.
+
 # Puedes usar estos códigos de color para colorear los mensajes:
 # --------------
 # Negro = &0, Azul = &1, Verde = &2, Cian = &3, Rojo = &4
