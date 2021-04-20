@@ -6,38 +6,63 @@ import java.io.IOException;
 import com.gmail.goosius.siegewar.SiegeWar;
 
 import com.gmail.goosius.siegewar.utils.FileMgmt;
+import com.gmail.goosius.siegewar.utils.SiegeWarBattleSessionUtil;
 
 public class Settings {
 	private static CommentedConfiguration config, newConfig;
+	private static File battleIconFile;
+	public static final String BATTLE_BANNER_FILE_NAME = "crossedswords.png";
 
 	public static boolean loadSettingsAndLang() {
 		SiegeWar sw = SiegeWar.getSiegeWar();
-		try {
-			Settings.loadConfig(sw.getDataFolder().getPath() + File.separator + "config.yml", sw.getVersion());
-		} catch (IOException e) {
-            e.printStackTrace();
-            System.err.println(SiegeWar.prefix + "Config.yml failed to load! Disabling!");
-            return false;
-        }
+		boolean loadSuccessFlag = true;
 
 		try {
+			Settings.loadConfig(sw.getDataFolder().getPath() + File.separator + "config.yml", sw.getVersion());
+		} catch (Exception e) {
+            System.err.println(SiegeWar.prefix + "Config.yml failed to load! Disabling!");
+			loadSuccessFlag = false;
+        }
+
+		// Some list variables do not reload upon loadConfig.
+		SiegeWarSettings.resetSpecialCaseVariables();
+		
+		try {
 			Translation.loadLanguage(sw.getDataFolder().getPath() + File.separator, "english.yml");
-		} catch (IOException e) {
-	        e.printStackTrace();
+		} catch (Exception e) {
 	        System.err.println(SiegeWar.prefix + "Language file failed to load! Disabling!");
-	        return false;
+			loadSuccessFlag = false;
 	    }
-		return true;
+
+		//Extract images
+		try {
+			battleIconFile = FileMgmt.extractImageFile(BATTLE_BANNER_FILE_NAME);
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.err.println(SiegeWar.prefix + "Could not load images! Disabling!");
+			loadSuccessFlag = false;
+		}
+
+		//Schedule next battle session
+		try {
+			SiegeWarBattleSessionUtil.scheduleNextBattleSession();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.err.println(SiegeWar.prefix + "Problem Scheduling Battle Session! Disabling!");
+			loadSuccessFlag = false;
+		}
+
+		return loadSuccessFlag;
 	}
 	
-	public static void loadConfig(String filepath, String version) throws IOException {
+	public static void loadConfig(String filepath, String version) throws Exception {
 		if (FileMgmt.checkOrCreateFile(filepath)) {
 			File file = new File(filepath);
 
 			// read the config.yml into memory
 			config = new CommentedConfiguration(file);
 			if (!config.load())
-				System.out.print("Failed to load Config!");
+				throw new IOException("Failed to load Config!");
 
 			setDefaults(version, file);
 			config.save();
@@ -141,4 +166,7 @@ public class Settings {
 		config.save();
 	}
 
+	public static File getBattleIconFile() {
+		return battleIconFile;
+	}
 }
