@@ -28,13 +28,15 @@ description: >
 
 # Términos de traducción:
 # Siege: asedio
+# War chest: botín de guerra
+# Besieged: sitiada
 
 plugin_prefix: '&f[&6SiegeWar&f] '
 msg_err_command_disable: '&cNo tienes los permisos necesarios para usar ese comando.'
 
 # Mensajes de las guerras de asedio
-msg_siege_war_attack_pay_war_chest: '&b %s, with a value of %s. Whoever wins the siege will get this money.'
-msg_siege_war_attack_recover_war_chest: '&bThe war chest has been recovered by %s, with a value of %s.'
+msg_siege_war_attack_pay_war_chest: '&b %s, con un valor de %s. Quien gane el asedio ganará este dinero.'
+msg_siege_war_attack_recover_war_chest: '&bEl botín de la guerra fue recuperado por %s, con un valor de %s.'
 msg_siege_war_defender_win: '&bThe defenders of %s have successfully driven off all attacking armies. The siege has failed!'
 msg_siege_war_attacker_win: '&bAn army belonging to %s has successfully breached the defences of %s. The siege is over!'
 msg_siege_war_neutral_town_plundered: '&b%s has been plundered of %s by %s!'
@@ -413,24 +415,24 @@ msg_swa_town_occupation_change_success: '&bTown occupier changed to %s for %s.'
 status_nation_town_stats: '&2Town Invasion History - Foreign/Home: &a%d&2/&a%d'
 status_nation_plunder_stats: '&2Town Plunder History - Gains/Losses: &a%d&2/&a%d'
 
-#Siege effects
-msg_err_siege_war_cannot_spawn_into_siegezone_or_besieged_town: '&cOnly town residents can spawn into a besieged town or siege zone.'
+# Efectos de asedio
+msg_err_siege_war_cannot_spawn_into_siegezone_or_besieged_town: '&cSolo los residentes de la ciudad pueden entrar a un area sitiada o bajo asedio.'
 
-#All-Nation-Sieges
-msg_err_siege_affected_home_nation_cannot_recruit: "&cThe nation cannot add new towns, because one of its home towns is under siege attack."
+# Asedios nacionales-internacionales
+msg_err_siege_affected_home_nation_cannot_recruit: "&cLa nación no puede añadir nuevas ciudades, porque una de sus ciudades está bajo el ataque de un asedio."
 msg_err_siege_affected_home_nation_town_cannot_toggle_pvp: "&cCannot toggle PVP, because one of your nation's home towns is under siege attack."
 msg_err_siege_affected_home_nation_town_cannot_recruit: "&cThe town cannot add new residents, because one of its nation's home towns is under siege attack."
 msg_err_siege_affected_home_nation_town_cannot_claim: "&cCannot claim land, because one of your nation's home towns is under siege attack."
 msg_err_siege_affected_home_nation_town_cannot_unclaim: "&cCannot unclaim land, because one of your nation's home towns is under siege attack."
 msg_err_cannot_start_siege_because_towns_home_nation_has_besieged_town: "&cCannot start siege on this nation town, because one of its nation's home towns is already under siege attack."
 
-# Added in 0.17
+# Añadido en la versión de SiegeWar 0.17
 
-# Peaceful towns homeblock move restrictions
-msg_err_peaceful_town_cannot_move_homeblock: "&cPeaceful towns cannot move their homeblocks. If you wish to move your homeblock, first toggle peacefulness off."
+# Restricciones del movimiento de terrenos principales o homeblock en ciudades pacíficas
+msg_err_peaceful_town_cannot_move_homeblock: "&cLas ciudades pacíficas no pueden mover su homeblock. Si deseas mover tu homeblock, desactiva la paz primero."
 
-# Added in 0.18
+# Añadido en la versión de SiegeWar 0.18
 
-# Homeblock move restrictions
-msg_err_besieged_town_cannot_move_homeblock: "&cBesieged towns cannot move their homeblocks."
-msg_err_occupied_town_cannot_move_homeblock: "&cOccupied towns cannot move their homeblocks."
+# Restricciones del movimiento de terrenos principales o homeblock
+msg_err_besieged_town_cannot_move_homeblock: "&cLas ciudades sitiadas no pueden mover su homeblock."
+msg_err_occupied_town_cannot_move_homeblock: "&cLas ciudades ocupadas no pueden mover su homeblock."
