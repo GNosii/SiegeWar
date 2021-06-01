@@ -2,42 +2,24 @@ package com.gmail.goosius.siegewar.utils;
 
 import com.gmail.goosius.siegewar.SiegeController;
 import com.gmail.goosius.siegewar.enums.SiegeSide;
+import com.gmail.goosius.siegewar.objects.BattleSession;
 import com.gmail.goosius.siegewar.objects.Siege;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.palmergames.bukkit.towny.TownyAPI;
-import com.palmergames.bukkit.towny.exceptions.NotRegisteredException;
+import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.Nation;
 import com.palmergames.bukkit.towny.object.Resident;
-import com.palmergames.bukkit.towny.object.TownyObject;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This class contains utility functions related to siege points
+ * This class contains utility functions related to battle scoring - i.e. battle points and siege balance
  * 
  * @author Goosius
  */
-public class SiegeWarPointsUtil {
-
-	/**
-	 * This method calculates who has won a siege
-	 * 
-	 * Defending Town - The defending town has won the siege if all of the siege zones are in negative points.
-	 * Attacking Nation - an attacking nation has won the siege if its siege points are positive,
-	 *                    and higher than the siegepoints of any other attacker.
-	 *
-	 * @param siege the siege
-	 * @return the winner of the siege
-	 */
-	public static TownyObject calculateSiegeWinner(Siege siege) {
-		if(siege.getSiegePoints() > 0) {
-			return siege.getAttackingNation();
-		} else {
-			return siege.getDefendingTown();
-		}
-    }
+public class SiegeWarScoringUtil {
 
 	/**
 	 * This method determines if a players is in the 'timed point zone' of a siege
@@ -53,11 +35,11 @@ public class SiegeWarPointsUtil {
 	 */
 	public static boolean isPlayerInTimedPointZone(Player player, Siege siege) {
 		return TownyAPI.getInstance().isWilderness(player.getLocation())
-				&& SiegeWarDistanceUtil.isInTimedPointZone(player, siege);
+				&& SiegeWarDistanceUtil.isInTimedPointZone(player.getLocation(), siege);
 	}
 
 	/**
-	 * This method applies penalty points to a player if they are in the given siegezone
+	 * This method applies penalty battle points to a player if they are in the given siegezone
 	 * Offline players will also be punished
 	 *
 	 * @param residentIsAttacker is the resident an attacker or defender?
@@ -71,50 +53,56 @@ public class SiegeWarPointsUtil {
 											 Resident resident,
 											 Siege siege,
 											 String unformattedErrorMessage) {
-		//Give siege points to opposing side
-		int siegePoints;
-		if (residentIsAttacker) {
-			siegePoints = -SiegeWarSettings.getWarSiegePointsForAttackerDeath();
-			siegePoints = adjustSiegePointPenaltyForBannerControl(true, siegePoints, siege);
-			siegePoints = adjustSiegePointsForPopulationQuotient(false, siegePoints, siege);
-			siege.adjustSiegePoints(siegePoints);
-		} else {
-			siegePoints = SiegeWarSettings.getWarSiegePointsForDefenderDeath();
-			siegePoints = adjustSiegePointPenaltyForBannerControl(false, siegePoints, siege);
-			siegePoints = adjustSiegePointsForPopulationQuotient(true, siegePoints, siege);
-			siege.adjustSiegePoints(siegePoints);
-		}
+		//No penalty points without an active battle session
+		if(!BattleSession.getBattleSession().isActive())
+			return;
 
-		SiegeController.saveSiege(siege);
+		//Give battle points to opposing side
+		int battlePoints;
+		if (residentIsAttacker) {
+			battlePoints = SiegeWarSettings.getWarBattlePointsForAttackerDeath();
+			battlePoints = applyBattlePointsPenaltyForBannerControl(true, battlePoints, siege);
+			battlePoints = applyBattlePointsAdjustmentForPopulationQuotient(false, battlePoints, siege);
+			siege.adjustDefenderBattlePoints(battlePoints);
+		} else {
+			battlePoints = SiegeWarSettings.getWarBattlePointsForDefenderDeath();
+			battlePoints = applyBattlePointsPenaltyForBannerControl(false, battlePoints, siege);
+			battlePoints = applyBattlePointsAdjustmentForPopulationQuotient(true, battlePoints, siege);
+			siege.adjustAttackerBattlePoints(battlePoints);
+		}
 
 		//Send messages to siege participants
 		String message = String.format(
 			unformattedErrorMessage,
-			siege.getDefendingTown().getName(),
+			siege.getTown().getName(),
 			resident.getName(),
-			Math.abs(siegePoints));
+			Math.abs(battlePoints));
 
 		SiegeWarNotificationUtil.informSiegeParticipants(siege, message);
 	}
 
-	public static void updatePopulationBasedSiegePointModifiers() {
+	public static void updatePopulationBasedBattlePointModifiers() {
 		Map<Nation,Integer> nationSidePopulationsCache = new HashMap<>();
 		for (Siege siege : SiegeController.getSieges()) {
-			updateSiegePointPopulationModifier(siege, nationSidePopulationsCache);
+			updateBattlePointPopulationModifier(siege, nationSidePopulationsCache);
 		}
 	}
 
-	private static void updateSiegePointPopulationModifier(Siege siege, Map<Nation,Integer> nationSidePopulationsCache) {
-		Nation nation = null;
+	private static void updateBattlePointPopulationModifier(Siege siege, Map<Nation,Integer> nationSidePopulationsCache) {
 		int attackerPopulation;
 		int defenderPopulation;
 
 		//Calculate defender population
-		if(siege.getDefendingTown().hasNation()) {
-			try {
-				nation = siege.getDefendingTown().getNation();
-			} catch (NotRegisteredException e) {
-			}
+		Nation nation = null;
+		if(siege.getDefender() instanceof Nation) {
+			nation = (Nation)siege.getDefender();
+		} else {
+			nation = TownyAPI.getInstance().getTownNationOrNull((Town)siege.getDefender());
+		}
+
+		if(nation != null) {
+			nation = TownyAPI.getInstance().getTownNationOrNull(siege.getTown());
+
 			if(nationSidePopulationsCache != null && nationSidePopulationsCache.containsKey(nation)) {
 				defenderPopulation = nationSidePopulationsCache.get(nation);
 			} else {
@@ -126,20 +114,30 @@ public class SiegeWarPointsUtil {
 					nationSidePopulationsCache.put(nation, defenderPopulation);
 			}
 		} else {
-			defenderPopulation = siege.getDefendingTown().getNumResidents();
+			defenderPopulation = ((Town)siege.getDefender()).getNumResidents();
 		}
 
 		//Calculate attacker population
-		nation = siege.getAttackingNation();
-		if(nationSidePopulationsCache != null && nationSidePopulationsCache.containsKey(nation)) {
-			attackerPopulation = nationSidePopulationsCache.get(nation);
-		} else {
-			attackerPopulation = nation.getNumResidents();
-			for (Nation alliedNation : nation.getMutualAllies()) {
-				attackerPopulation += alliedNation.getNumResidents();
+		nation = null;
+		if(siege.getAttacker() instanceof Nation) {
+			nation = (Nation)siege.getAttacker();
+		} else if (((Town)siege.getAttacker()).hasNation()) {
+			nation = TownyAPI.getInstance().getTownNationOrNull((Town)siege.getAttacker());
+		}
+
+		if(nation != null) {
+			if(nationSidePopulationsCache != null && nationSidePopulationsCache.containsKey(nation)) {
+				attackerPopulation = nationSidePopulationsCache.get(nation);
+			} else {
+				attackerPopulation = nation.getNumResidents();
+				for (Nation alliedNation : nation.getMutualAllies()) {
+					attackerPopulation += alliedNation.getNumResidents();
+				}
+				if (nationSidePopulationsCache != null)
+					nationSidePopulationsCache.put(nation, attackerPopulation);
 			}
-			if (nationSidePopulationsCache != null)
-				nationSidePopulationsCache.put(nation, attackerPopulation);
+		} else {
+			attackerPopulation = ((Town)siege.getAttacker()).getNumResidents();
 		}
 
 		//Note which side has the lower population
@@ -170,44 +168,44 @@ public class SiegeWarPointsUtil {
 		//1 represents max boost
 		double normalizedPointBoost = (appliedPopulationQuotient -1) / (maxPopulationQuotient -1);
 	
-		//Siege Point modifier
+		//Battle Points modifier
 		//Lowest possible value should be 1.
 		//Highest possible value should be the max boost value in the config
-		double siegePointModifier = 1 + (normalizedPointBoost * (SiegeWarSettings.getWarSiegeMaxPopulationBasedPointBoost() -1));
+		double battlePointsModifier = 1 + (normalizedPointBoost * (SiegeWarSettings.getWarSiegeMaxPopulationBasedPointBoost() -1));
 		
-		siege.setSiegePointModifierForSideWithLowestPopulation(siegePointModifier);
+		siege.setBattlePointsModifierForSideWithLowestPopulation(battlePointsModifier);
 	}
 
-	public static int adjustSiegePointsForPopulationQuotient(boolean attackerGain, int siegePoints, Siege siege) {
+	public static int applyBattlePointsAdjustmentForPopulationQuotient(boolean attackerGain, int battlePoints, Siege siege) {
 		if(!SiegeWarSettings.getWarSiegePopulationBasedPointBoostsEnabled()) {
-			return siegePoints;
+			return battlePoints;
 		}
 
-		if (siege.getSiegePointModifierForSideWithLowestPopulation() == 0) {
-			updateSiegePointPopulationModifier(siege, null); //Init values
+		if (siege.getBattlePointsModifierForSideWithLowestPopulation() == 0) {
+			updateBattlePointPopulationModifier(siege, null); //Init values
 		}
 
 		if((attackerGain && !siege.isAttackerHasLowestPopulation())
 			|| (!attackerGain && siege.isAttackerHasLowestPopulation())) {
-			return siegePoints;
+			return battlePoints;
 		}
 
-		double modifier = siege.getSiegePointModifierForSideWithLowestPopulation();
-		return (int) (siegePoints * modifier);
+		double modifier = siege.getBattlePointsModifierForSideWithLowestPopulation();
+		return (int) (battlePoints * modifier);
 	}
 
-	public static int adjustSiegePointPenaltyForBannerControl(boolean residentIsAttacker, int siegePoints, Siege siege) {
-		if(SiegeWarSettings.isWarSiegeCounterattackBoosterDisabled())
-			return siegePoints;
+	public static int applyBattlePointsPenaltyForBannerControl(boolean residentIsAttacker, int battlePoints, Siege siege) {
+		if(!SiegeWarSettings.isWarSiegeCounterattackBoosterEnabled())
+			return battlePoints;
 
 		if(
 			(residentIsAttacker && siege.getBannerControllingSide() == SiegeSide.ATTACKERS)
 			||
 			(!residentIsAttacker && siege.getBannerControllingSide() == SiegeSide.DEFENDERS)
 		) {
-			return siegePoints + (int)((double)siegePoints * siege.getBannerControllingResidents().size() /100 * SiegeWarSettings.getWarSiegeCounterattackBoosterExtraDeathPointsPerPlayerPercentage());
+			return battlePoints + (int)((double)battlePoints * siege.getBannerControllingResidents().size() /100 * SiegeWarSettings.getWarSiegeCounterattackBoosterExtraDeathPointsPerPlayerPercentage());
 		} else {
-			return siegePoints;
+			return battlePoints;
 		}
 	}
 }

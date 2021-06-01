@@ -1,12 +1,12 @@
 package com.gmail.goosius.siegewar.hud;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import com.gmail.goosius.siegewar.objects.Siege;
 import com.gmail.goosius.siegewar.SiegeWar;
-import com.gmail.goosius.siegewar.hud.SiegeWarHud;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -25,9 +25,11 @@ public class SiegeHUDManager {
         if (!warHudUsers.containsKey(player)) {
             warHudUsers.put(player, siege);
             SiegeWarHud.toggleOn(player, siege);
-        } else {
+        } else if (warHudUsers.get(player) != siege) {
+            warHudUsers.replace(player, siege);
+            SiegeWarHud.updateInfo(player, siege);
+        } else
             toggleOff(player);
-        }
     }
 
     public static void toggleOff(Player player) {
@@ -37,9 +39,9 @@ public class SiegeHUDManager {
     }
 
     public static void updateHUDs() {
-        for (Entry<Player, Siege> entry : warHudUsers.entrySet()) {
-            if (entry.getKey().getScoreboard().getTeam("points") == null) {
-                toggleOff(entry.getKey());
+        for (Entry<Player, Siege> entry : new ArrayList<>(warHudUsers.entrySet())) {
+            if (entry.getKey().getScoreboard().getTeam("balance") == null) {
+                warHudUsers.remove(entry.getKey());
                 continue;
             } else
                 SiegeWarHud.updateInfo(entry.getKey(), entry.getValue());

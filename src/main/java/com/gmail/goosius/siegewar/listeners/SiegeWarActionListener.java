@@ -1,31 +1,20 @@
 package com.gmail.goosius.siegewar.listeners;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.bukkit.Location;
-import org.bukkit.block.Block;
-import org.bukkit.entity.Player;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.ChatColor;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
-import com.gmail.goosius.siegewar.SiegeController;
 import com.gmail.goosius.siegewar.SiegeWar;
 import com.gmail.goosius.siegewar.playeractions.PlaceBlock;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.gmail.goosius.siegewar.utils.SiegeWarBlockUtil;
 import com.gmail.goosius.siegewar.utils.SiegeWarDistanceUtil;
-import com.palmergames.bukkit.towny.event.actions.TownyActionEvent;
 import com.palmergames.bukkit.towny.event.actions.TownyBuildEvent;
 import com.palmergames.bukkit.towny.event.actions.TownyBurnEvent;
 import com.palmergames.bukkit.towny.event.actions.TownyDestroyEvent;
-import com.palmergames.bukkit.towny.event.actions.TownyExplodingBlocksEvent;
-import com.palmergames.bukkit.towny.exceptions.NotRegisteredException;
-import com.palmergames.bukkit.towny.object.Nation;
-import com.palmergames.bukkit.towny.object.Town;
-import com.palmergames.bukkit.towny.object.TownyWorld;
 import com.gmail.goosius.siegewar.settings.Translation;
-import com.palmergames.bukkit.towny.object.WorldCoord;
 
 /**
  * 
@@ -44,13 +33,8 @@ public class SiegeWarActionListener implements Listener {
 	
 	@EventHandler
 	public void onBlockBuild(TownyBuildEvent event) {
-		if (SiegeWarSettings.getWarSiegeEnabled()) {
+		if (SiegeWarSettings.getWarSiegeEnabled())
 			PlaceBlock.evaluateSiegeWarPlaceBlockRequest(event.getPlayer(), event.getBlock(), event);
-
-//			if (!event.isCancelled() && TownyAPI.getInstance().isNationZone(event.getLocation())) {
-//				evaluateNationZone(event.getPlayer(), event.getLocation(), event);
-//			}
-		}
 	}
 
 
@@ -59,34 +43,18 @@ public class SiegeWarActionListener implements Listener {
 	 */
 	@EventHandler
 	public void onBlockBreak(TownyDestroyEvent event) {
-		if (SiegeWarSettings.getWarSiegeEnabled()) { 
+		if (SiegeWarSettings.getWarSiegeEnabled())
+			if(SiegeWarSettings.isTrapWarfareMitigationEnabled()
+					&& SiegeWarDistanceUtil.isLocationInActiveTimedPointZoneAndBelowSiegeBannerAltitude(event.getBlock().getLocation())) {
+				event.getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.DARK_RED + Translation.of("msg_err_cannot_alter_blocks_below_banner_in_timed_point_zone")));
+				event.setCancelled(true);
+				return;
+			}
 			if (SiegeWarBlockUtil.isBlockNearAnActiveSiegeBanner(event.getBlock())) {
 				event.setMessage(Translation.of("msg_err_siege_war_cannot_destroy_siege_banner"));
 				event.setCancelled(true);
+				return;
 			}
-			
-//			if (!event.isCancelled() && TownyAPI.getInstance().isNationZone(event.getLocation())) {
-//				evaluateNationZone(event.getPlayer(), event.getLocation(), event);
-//			}
-		}
-	}
-
-	@SuppressWarnings("unused")
-	private void evaluateNationZone(Player player, Location location, TownyActionEvent event) {
-		WorldCoord pos = WorldCoord.parseWorldCoord(event.getLocation());
-		TownyWorld world = null;
-		Town nearestTown = null;
-		Nation nation = null;
-		try {
-			world = pos.getTownyWorld();
-			nearestTown = world.getClosestTownWithNationFromCoord(pos.getCoord(), null);
-			nation = nearestTown.getNation();
-		} catch (NotRegisteredException ignored) {}
-		
-		if(SiegeController.hasActiveSiege(nearestTown)) {
-			event.setMessage(Translation.of("msg_err_siege_war_nation_zone_this_area_protected_but_besieged", world.getUnclaimedZoneName(), nation.getName()));
-			event.setCancelled(true);
-		}
 	}
 	
 	/*
@@ -94,28 +62,11 @@ public class SiegeWarActionListener implements Listener {
 	 */
 	@EventHandler
 	public void onBurn(TownyBurnEvent event) {
-		if (SiegeWarSettings.getWarSiegeEnabled() && SiegeWarBlockUtil.isBlockNearAnActiveSiegeBanner(event.getBlock())) {	
-			event.setCancelled(true);	
+		if (SiegeWarSettings.getWarSiegeEnabled() && SiegeWarBlockUtil.isBlockNearAnActiveSiegeBanner(event.getBlock())) {
+			event.setCancelled(true);
 		}
 	}
-	
-	/*
-	 * SW will prevent an explosion from altering an area around a banner.
-	 */
-	@EventHandler
-	public void onBlockExplode(TownyExplodingBlocksEvent event) {
-		if (SiegeWarSettings.getWarSiegeEnabled()) {
-			List<Block> blockList = event.getTownyFilteredBlockList();
-			List<Block> filteredList = new ArrayList<>();
-			for (Block block : blockList) {
-				if (!SiegeWarBlockUtil.isBlockNearAnActiveSiegeBanner(block)) {
-					filteredList.add(block);
-				}
-			}
-			event.setBlockList(filteredList);
-		}
-	}
-	
+
 	/*
 	 * SW can affect the emptying of buckets, which could affect a banner.
 	 */

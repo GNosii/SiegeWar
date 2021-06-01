@@ -6,21 +6,14 @@ import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.palmergames.bukkit.towny.TownySettings;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
 import com.palmergames.bukkit.towny.object.Coord;
-import com.palmergames.bukkit.towny.object.Nation;
 import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.TownBlock;
 import com.palmergames.bukkit.towny.object.TownyWorld;
 import com.palmergames.bukkit.towny.object.WorldCoord;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * This class contains utility functions related to calculating and validating distances
@@ -30,7 +23,6 @@ import java.util.List;
 public class SiegeWarDistanceUtil {
 
 	private static final int TOWNBLOCKSIZE= TownySettings.getTownBlockSize();
-	public static List<String> worldsWithSiegeWarEnabled = null;
 
 	/**
 	 * This method determines if the difference in elevation between a (attack banner) block, 
@@ -68,43 +60,6 @@ public class SiegeWarDistanceUtil {
 		return blockElevation - averageTownElevation;
 	}
 
-
-	/**
-	 * This method finds the nearest siege to the given block, controlled by the given nation. 
-	 *
-	 * @param block the given block
-	 * @param nation the given nation
-	 * @return a SiegeZoneDistance object containing both the siege and distance. Null if not found.
-	 */
-	@Nullable
-	public static Siege findNearestSiegeForNation(Block block, Nation nation) {
-		//Find the nearest siege zone to the given block within the given radius belonging to the given nation.
-		Siege nearestSiege = null;
-		double distanceToNearestSiegeZone = -1;
-		for(Siege siege: SiegeController.getSieges(nation)) {
-
-			if(!block.getLocation().getWorld().getName().equalsIgnoreCase(siege.getFlagLocation().getWorld().getName())) {
-				continue;
-			}
-			
-			if(block.getLocation().distance(siege.getFlagLocation()) > TOWNBLOCKSIZE)
-				continue;
-
-			if (nearestSiege == null) {
-				nearestSiege = siege;
-				distanceToNearestSiegeZone = block.getLocation().distance(nearestSiege.getFlagLocation());
-			} else {
-				double distanceToNewTarget = block.getLocation().distance(siege.getFlagLocation());
-				if(distanceToNewTarget < distanceToNearestSiegeZone) {
-					nearestSiege = siege;
-					distanceToNearestSiegeZone = distanceToNewTarget;
-				}
-			}
-		}
-	
-		return nearestSiege;
-	}
-
 	/**
 	 * This method returns true if the given location is in an active siegezone
 	 *
@@ -121,24 +76,6 @@ public class SiegeWarDistanceUtil {
 		return false;
 	}
 
-	/**
-	 * This method determines if a siegewar is enabled in the given world
-	 *
-	 * @param worldToCheck the world to check
-	 * @return true if siegewar is enabled in the given world
-	 */
-	public static boolean isSiegeWarEnabledInWorld(World worldToCheck) {
-		if (worldsWithSiegeWarEnabled == null) {
-			worldsWithSiegeWarEnabled = new ArrayList<>();
-			String[] worldNamesAsArray = SiegeWarSettings.getWarSiegeWorlds().split(",");
-			for (String worldName : worldNamesAsArray) {
-				if (Bukkit.getServer().getWorld(worldName.trim()) != null)
-					worldsWithSiegeWarEnabled.add(Bukkit.getServer().getWorld(worldName.trim()).getName());
-			}
-		}
-		return worldsWithSiegeWarEnabled.contains(worldToCheck.getName());
-	}
-
 	public static boolean isInSiegeZone(Location location, Siege siege) {
 		return areLocationsCloseHorizontally(location, siege.getFlagLocation(), SiegeWarSettings.getWarSiegeZoneRadiusBlocks());
 	}
@@ -147,8 +84,8 @@ public class SiegeWarDistanceUtil {
 		return areLocationsCloseHorizontally(entity.getLocation(), siege.getFlagLocation(), SiegeWarSettings.getWarSiegeZoneRadiusBlocks());
 	}
 
-	public static boolean isInTimedPointZone(Entity entity, Siege siege) {
-		return areLocationsClose(entity.getLocation(), siege.getFlagLocation(), SiegeWarSettings.getBannerControlHorizontalDistanceBlocks(), SiegeWarSettings.getBannerControlVerticalDistanceBlocks());
+	public static boolean isInTimedPointZone(Location location, Siege siege) {
+		return areLocationsClose(location, siege.getFlagLocation(), TownySettings.getTownBlockSize(), SiegeWarSettings.getBannerControlVerticalDistanceBlocks());
 	}
 
 	public static boolean areTownsClose(Town town1, Town town2, int radiusTownblocks) {
@@ -209,5 +146,27 @@ public class SiegeWarDistanceUtil {
 		int locX = worldCoord.getX() * TOWNBLOCKSIZE;
 		int locZ = worldCoord.getZ() * TOWNBLOCKSIZE;
 		return new Location(worldCoord.getBukkitWorld(), locX, 255, locZ);
+	}
+
+	/**
+	 * This method is used in Anti-trap warfare mitigation
+	 *
+	 * @param location
+	 * @return true of the location is in an active timed point zone AND below siege banner altitude
+	 */
+	public static boolean isLocationInActiveTimedPointZoneAndBelowSiegeBannerAltitude(Location location) {
+		//Look through all sieges
+		for (Siege siege : SiegeController.getSieges()) {
+			if (siege.getStatus().isActive()
+				&& isInTimedPointZone(location, siege)
+				&& isBelowSiegeBannerAltitude(location, siege))
+				return true;
+		}
+		//Location does not meet the criteria
+		return false;
+	}
+
+	public static boolean isBelowSiegeBannerAltitude(Location location, Siege siege) {
+		return location.getY() < siege.getFlagLocation().getY();
 	}
 }

@@ -1,6 +1,7 @@
 package com.gmail.goosius.siegewar.utils;
 
 import com.gmail.goosius.siegewar.SiegeController;
+import com.gmail.goosius.siegewar.enums.SiegeSide;
 import com.gmail.goosius.siegewar.enums.SiegeWarPermissionNodes;
 import com.gmail.goosius.siegewar.objects.Siege;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
@@ -9,10 +10,7 @@ import com.palmergames.bukkit.towny.Towny;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.TownySettings;
 import com.palmergames.bukkit.towny.TownyUniverse;
-import com.palmergames.bukkit.towny.exceptions.NotRegisteredException;
-import com.palmergames.bukkit.towny.object.Nation;
 import com.palmergames.bukkit.towny.object.Resident;
-import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.util.BukkitTools;
 import com.palmergames.util.TimeTools;
 import org.bukkit.Location;
@@ -46,23 +44,21 @@ public class SiegeWarSicknessUtil {
                 continue;
 
             boolean allowedInAnyOverlappingSiege = false;
-            try {
-                for (Siege siege : sieges) {
-                    if (isSiegeParticipant(resident, siege)) {
-                        allowedInAnyOverlappingSiege = true;
-                        break;
-                    }
-                }
+            for (Siege siege : sieges) {
+			    if (isSiegeParticipant(player, resident, siege)) {
+			        allowedInAnyOverlappingSiege = true;
+			        break;
+			    }
+			}
 
-                if (!allowedInAnyOverlappingSiege) {
-                    if (isInOwnClaims(resident)) {
-                        punishWithSpecialWarSickness(player);
-                    } else {
-                        punishWithFullWarSickness(player);
-                    }
+			if (!allowedInAnyOverlappingSiege) {
+			    if (isInOwnClaims(resident)) {
+			        punishWithSpecialWarSickness(player);
+			    } else {
+			        punishWithFullWarSickness(player);
+			    }
 
-                }
-            } catch (NotRegisteredException ignored) {}
+			}
 
         }
 
@@ -75,29 +71,27 @@ public class SiegeWarSicknessUtil {
                     SiegeWarSettings.getSicknessWarningTimeInTicks() / 20));
         }
         Towny.getPlugin().getServer().getScheduler().runTaskLater(Towny.getPlugin(), () -> {
-            try {
-                Resident resident = TownyUniverse.getInstance().getResident(player.getUniqueId());
-                List<Siege> sieges = SiegeController.getActiveSiegesAt(player.getLocation());
-                boolean allowedInAnyOverlappingSiege = false;
-                for (Siege siege : sieges) {
-                    if (isSiegeParticipant(resident, siege)) {
-                        allowedInAnyOverlappingSiege = true;
-                        break;
-                    }
-                }
+            Resident resident = TownyUniverse.getInstance().getResident(player.getUniqueId());
+			List<Siege> sieges = SiegeController.getActiveSiegesAt(player.getLocation());
+			boolean allowedInAnyOverlappingSiege = false;
+			for (Siege siege : sieges) {
+			    if (isSiegeParticipant(player, resident, siege)) {
+			        allowedInAnyOverlappingSiege = true;
+			        break;
+			    }
+			}
 
-                if (!allowedInAnyOverlappingSiege && SiegeWarDistanceUtil.isLocationInActiveSiegeZone(player.getLocation())) {
-                    // still in siege zone
-                    List<PotionEffect> potionEffects = new ArrayList<>();
-                    potionEffects.add(new PotionEffect(PotionEffectType.CONFUSION, effectDurationTicks, 4));
-                    potionEffects.add(new PotionEffect(PotionEffectType.POISON, effectDurationTicks, 4));
-                    potionEffects.add(new PotionEffect(PotionEffectType.WEAKNESS, effectDurationTicks, 4));
-                    potionEffects.add(new PotionEffect(PotionEffectType.SLOW, effectDurationTicks, 2));
-                    potionEffects.add(new PotionEffect(PotionEffectType.SLOW_DIGGING, effectDurationTicks, 2));
-                    player.addPotionEffects(potionEffects);
-                    player.sendMessage(Translation.of("plugin_prefix") + Translation.of("msg_you_received_war_sickness"));
-                }
-            } catch (NotRegisteredException ignored) {}
+			if (!allowedInAnyOverlappingSiege && SiegeWarDistanceUtil.isLocationInActiveSiegeZone(player.getLocation())) {
+			    // still in siege zone
+			    List<PotionEffect> potionEffects = new ArrayList<>();
+			    potionEffects.add(new PotionEffect(PotionEffectType.CONFUSION, effectDurationTicks, 4));
+			    potionEffects.add(new PotionEffect(PotionEffectType.POISON, effectDurationTicks, 4));
+			    potionEffects.add(new PotionEffect(PotionEffectType.WEAKNESS, effectDurationTicks, 4));
+			    potionEffects.add(new PotionEffect(PotionEffectType.SLOW, effectDurationTicks, 2));
+			    potionEffects.add(new PotionEffect(PotionEffectType.SLOW_DIGGING, effectDurationTicks, 2));
+			    player.addPotionEffects(potionEffects);
+			    player.sendMessage(Translation.of("plugin_prefix") + Translation.of("msg_you_received_war_sickness"));
+			}
         }, SiegeWarSettings.getSicknessWarningTimeInTicks());
     }
 
@@ -110,40 +104,16 @@ public class SiegeWarSicknessUtil {
         });
     }
 
-    public static boolean isSiegeParticipant(Resident resident, Siege siege) throws NotRegisteredException {
-
+    public static boolean isSiegeParticipant(Player player, Resident resident, Siege siege) {
         if (!resident.hasTown())
             return false;
 
-        Town defendingTown = siege.getDefendingTown();
-        Town residentTown = resident.getTown();
-        Nation attackingNation = siege.getAttackingNation();
+        SiegeSide siegeSide = SiegeWarAllegianceUtil.calculateCandidateSiegePlayerSide(player, TownyAPI.getInstance().getResidentTownOrNull(resident), siege);
 
-        if (residentTown == defendingTown && resident.getPlayer()
-                .hasPermission(SiegeWarPermissionNodes.SIEGEWAR_TOWN_SIEGE_POINTS.getNode())) {
-            // Player is defending their own town
-            return true;
-        }
-
-        if (residentTown.hasNation() &&
-                (attackingNation == residentTown.getNation() || attackingNation.hasMutualAlly(residentTown.getNation()))
-                && resident.getPlayer().hasPermission(SiegeWarPermissionNodes.SIEGEWAR_NATION_SIEGE_POINTS.getNode())) {
-            // Player is attacking
-            return true;
-        }
-
-        if (defendingTown.hasNation()
-                && (defendingTown.getNation() == residentTown.getNation()
-                || defendingTown.getNation().hasMutualAlly(residentTown.getNation()))
-                && resident.getPlayer().hasPermission(SiegeWarPermissionNodes.SIEGEWAR_NATION_SIEGE_POINTS.getNode())) {
-            // Player is defending another town in the nation
-            return true;
-        }
-
-        return false;
+        return siegeSide != SiegeSide.NOBODY;
     }
 
-    private static boolean isInOwnClaims(Resident resident) throws NotRegisteredException {
+    private static boolean isInOwnClaims(Resident resident) {
         Location location = resident.getPlayer().getLocation();
         if (!resident.hasTown())
             return false;
@@ -151,7 +121,7 @@ public class SiegeWarSicknessUtil {
         if (TownyAPI.getInstance().isWilderness(location))
             return false;
 
-        return TownyAPI.getInstance().getTownBlock(location).getTown().equals(resident.getTown());
+        return TownyAPI.getInstance().getTown(location).equals(TownyAPI.getInstance().getResidentTownOrNull(resident));
     }
 
 }

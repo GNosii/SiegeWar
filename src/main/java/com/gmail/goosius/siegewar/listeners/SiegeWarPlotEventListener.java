@@ -21,7 +21,7 @@ public class SiegeWarPlotEventListener implements Listener {
     }
     
     /*
-    * SW will stop plot pvp being toggled in besieged or peaceful towns.
+    * SW will stop plot pvp being toggled in peaceful & besieged towns.
     */
     @EventHandler
 	public void onPlotTogglePVP(PlotTogglePvpEvent event) {
@@ -29,12 +29,14 @@ public class SiegeWarPlotEventListener implements Listener {
 			if (SiegeWarSettings.getWarSiegePvpAlwaysOnInBesiegedTowns() && SiegeController.hasActiveSiege(event.getTown()))  {
 				event.setCancellationMsg(Translation.of("msg_err_siege_besieged_town_cannot_toggle_pvp"));
 				event.setCancelled(true);
+				return;
 			}
             if (SiegeWarSettings.getWarCommonPeacefulTownsEnabled()
                     && !SiegeWarSettings.getWarCommonPeacefulTownsAllowedToTogglePVP()
                     && event.getTown().isNeutral()) {
 				event.setCancellationMsg(Translation.of("msg_err_peaceful_town_pvp_forced_off"));
 				event.setCancelled(true);
+				return;
 			}
 		}	
     }
