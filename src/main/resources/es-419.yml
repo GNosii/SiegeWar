@@ -114,9 +114,9 @@ msg_attackers: '&aAtacantes'
 msg_defenders: '&aDefensores'
 
 # Paz de ciudades
-status_town_peacefulness_status_change_timer: '&2Countdown To Peacefulness Status Change: &a%d days'
-msg_war_common_town_declared_peaceful: '&bPeacefulness Declared!. The town will be confirmed as peaceful in %d day(s).'
-msg_war_common_town_declared_non_peaceful: '&bNon-Peacefulness Declared!. The town will be confirmed as non-peaceful in %d day(s).'
+status_town_peacefulness_status_change_timer: '&2Cta. Atrás para el Cambio del Est. de la Paz: &a%d days'
+msg_war_common_town_declared_peaceful: '&b¡Paz declarada! La ciudad será confirmada como ciudad pacífica en %d día(s).'
+msg_war_common_town_declared_non_peaceful: '&b¡Neutralidad declarada! La ciudad será confirmada como ciudad neutral en %d día(s).'
 msg_war_common_town_peacefulness_countdown_cancelled: '&bThe peacefulness status change countdown was cancelled.'
 msg_war_siege_cannot_add_nation_military_rank_to_peaceful_resident: '&cUnable to add military rank to resident, because they are in a peaceful town.'
 msg_war_siege_peaceful_player_punished_for_being_in_siegezone: '&cWar-allergy active. To remove this effect, leave the siege-zone immediately.'
